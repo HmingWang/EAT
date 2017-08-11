@@ -36,6 +36,9 @@ namespace EAT
             dt.Columns.Add(new DataColumn("文件名"));
             dt.Columns.Add(new DataColumn("内容"));
             this.dataGridView1.Columns[1].Width = 300;
+
+            isFromExcel = false;
+            isFromTexts = false;
         }
 
 
@@ -57,6 +60,7 @@ namespace EAT
             }
 
             isFromExcel = true;
+            isFromTexts = false;
         }
 
         private void LoadExcelNPIO(string filePath)
@@ -243,6 +247,7 @@ namespace EAT
                 LoadTexts(files);
             }
 
+            isFromExcel = false;
             isFromTexts = true;
         }
 
