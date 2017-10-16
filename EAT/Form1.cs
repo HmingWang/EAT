@@ -15,6 +15,8 @@ using System.IO;
 using NPOI.SS.UserModel;
 using NPOI.HSSF.UserModel;
 using NPOI.XSSF.UserModel;
+using NPOI.XSSF.Util;
+using NPOI.HSSF.Util;
 
 namespace EAT
 {
@@ -94,66 +96,7 @@ namespace EAT
             workbook.Close();
             fs.Close();
         }
-
-
-        //private void LoadExcel(string filePath)
-        //{
-        //    Excel.Application app = new Excel.Application();
-        //    Excel.Sheets sheets;
-        //    Excel.Workbook workbook = null;
-        //    object oMissiong = Missing.Value;
-        //    DataTable dt = new DataTable();
-
-        //    workbook = app.Workbooks.Open(filePath, oMissiong, true, oMissiong, oMissiong, oMissiong, oMissiong, oMissiong, oMissiong, oMissiong, oMissiong, oMissiong, oMissiong, oMissiong, oMissiong);
-        //    //将数据读入到DataTable中——Start    
-
-        //    sheets = workbook.Worksheets;
-        //    Excel.Worksheet worksheet = (Excel.Worksheet)sheets.get_Item(1);//读取第一张表  
-        //    if (worksheet == null)
-        //    {
-        //        MessageBox.Show("Excel表中没有数据");
-        //        return;
-        //    }
-
-
-        //    string cellContent;
-        //    string cellName;
-        //    int iRowCount = worksheet.UsedRange.Rows.Count;
-        //    int iColCount = worksheet.UsedRange.Columns.Count;
-        //    Excel.Range range;
-
-       
-        //    this.dataGridView1.DataSource = dt; 
-        //    dt.Columns.Add(new DataColumn("文件名"));
-        //    dt.Columns.Add(new DataColumn("内容"));
-        //    this.dataGridView1.Columns[1].Width = 300;
-
-
-        //    for (int i = 1; i <= iRowCount; ++i)
-        //    {
-        //        range = (Excel.Range)worksheet.Cells[i, 1];
-        //        cellName = range.Text.ToString();
-
-        //        range = (Excel.Range)worksheet.Cells[i, 2];
-        //        cellContent = range.Text.ToString();
-
-        //        DataRow dr = dt.NewRow();
-        //        dr[0] = cellName;
-        //        dr[1] = cellContent;
-
-        //        dt.Rows.Add(dr);
-        //    }
-
-
-        //    //将数据读入到DataTable中——End  
-        //    workbook.Close(false, oMissiong, oMissiong);
-        //    System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
-        //    app.Workbooks.Close();
-        //    app.Quit();
-        //    System.Runtime.InteropServices.Marshal.ReleaseComObject(app);
-        //    GC.Collect();
-        //    GC.WaitForPendingFinalizers();
-        //}
+              
 
         private void button4_Click(object sender, EventArgs e)
         {
@@ -197,6 +140,22 @@ namespace EAT
                 cellName.SetCellValue(dt.Rows[i][0].ToString());
                 ICell cellContent = row.CreateCell(1);
                 cellContent.SetCellValue(dt.Rows[i][1].ToString());
+
+                ICell cellHyperlink = row.CreateCell(2);
+                cellHyperlink.SetCellValue("<链接>");
+                
+                //超链接
+                XSSFHyperlink Hyperlink = new XSSFHyperlink(HyperlinkType.File);
+                Hyperlink.Address = "./" + dt.Rows[i][0].ToString()+".txt";
+                cellHyperlink.Hyperlink = Hyperlink;
+
+                //颜色+下划线
+                IFont font = workbook.CreateFont();//创建字体样式  
+                font.Color = HSSFColor.Blue.Index;//设置字体颜色  
+                font.Underline = FontUnderlineType.Single;//下划线
+                ICellStyle style = workbook.CreateCellStyle();//创建单元格样式  
+                style.SetFont(font);//设置单元格样式中的字体样式  
+                cellHyperlink.CellStyle = style;//为单元格设置显示样式  
             }
 
             using (FileStream fs = File.Create(filePath))
