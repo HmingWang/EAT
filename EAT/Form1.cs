@@ -26,6 +26,7 @@ namespace EAT
         //
         private bool isFromExcel;
         private bool isFromTexts;
+        private bool isFromAny;
         private DataTable dt;
 
         public Form1()
@@ -41,14 +42,15 @@ namespace EAT
 
             isFromExcel = false;
             isFromTexts = false;
+            isFromAny = false;
         }
 
 
         private void button1_Click(object sender, EventArgs e)
         {
             OpenFileDialog open = new OpenFileDialog();
-          
-            open.Filter= "Excel 工作簿|*.xlsx|Excel 97-2003 工作簿|*.xls";
+
+            open.Filter = "Excel 工作簿|*.xlsx|Excel 97-2003 工作簿|*.xls";
 
             if (open.ShowDialog() == DialogResult.OK)
             {
@@ -63,6 +65,7 @@ namespace EAT
 
             isFromExcel = true;
             isFromTexts = false;
+            isFromAny = false;
         }
 
         private void LoadExcelNPIO(string filePath)
@@ -81,9 +84,9 @@ namespace EAT
 
             ISheet sheet = workbook.GetSheetAt(0);
 
-            dt.Clear();           
+            dt.Clear();
             int iRowCount = sheet.LastRowNum;
-            for(int i = 0; i < iRowCount; ++i)
+            for (int i = 0; i < iRowCount; ++i)
             {
                 IRow row = sheet.GetRow(i);
                 DataRow dr = dt.NewRow();
@@ -96,7 +99,7 @@ namespace EAT
             workbook.Close();
             fs.Close();
         }
-              
+
 
         private void button4_Click(object sender, EventArgs e)
         {
@@ -118,18 +121,67 @@ namespace EAT
             if (isFromTexts)//text->excel
             {
                 SaveFileDialog save = new SaveFileDialog();
-                save.Filter= "Excel 工作簿|*.xlsx";
+                save.Filter = "Excel 工作簿|*.xls";
                 if (save.ShowDialog() == DialogResult.OK)
                 {
                     string filePath = save.FileName;
                     SaveExcel(filePath);
                 }
             }
+            if (isFromAny)//anyfile->excel
+            {
+                SaveFileDialog save = new SaveFileDialog();
+                save.Filter = "Excel 工作簿|*.xls";
+                if (save.ShowDialog() == DialogResult.OK)
+                {
+                    string filePath = save.FileName;
+                    SaveExcelAny(filePath);
+                }
+            }
+        }
+
+        private void SaveExcelAny(string filePath)
+        {
+            IWorkbook workbook = new HSSFWorkbook();
+            ISheet sheet = workbook.CreateSheet("Sheet0");
+
+            int rowCount = dt.Rows.Count;
+            for (int i = 0; i < rowCount; ++i)
+            {
+                IRow row = sheet.CreateRow(i);
+                ICell cellName = row.CreateCell(0);
+                cellName.SetCellValue(dt.Rows[i][0].ToString());
+                
+
+                ICell cellHyperlink = row.CreateCell(1);
+                cellHyperlink.SetCellValue("<链接>");
+
+                //超链接
+                HSSFHyperlink Hyperlink = new HSSFHyperlink(HyperlinkType.Url);
+                Hyperlink.Address =  dt.Rows[i][0].ToString();
+                cellHyperlink.Hyperlink = Hyperlink;
+                //颜色+下划线
+                IFont font = workbook.CreateFont();//创建字体样式  
+                font.Color = HSSFColor.Blue.Index;//设置字体颜色  
+                font.Underline = FontUnderlineType.Single;//下划线
+                ICellStyle style = workbook.CreateCellStyle();//创建单元格样式  
+                style.SetFont(font);//设置单元格样式中的字体样式  
+                cellHyperlink.CellStyle = style;//为单元格设置显示样式  
+            }
+
+            using (FileStream fs = File.Create(filePath))
+            {
+                workbook.Write(fs);
+                workbook.Close();
+                fs.Close();
+            }
+
+            MessageBox.Show("转换完成");
         }
 
         private void SaveExcel(string filePath)
         {
-            IWorkbook workbook = new XSSFWorkbook();
+            IWorkbook workbook = new HSSFWorkbook();
             ISheet sheet = workbook.CreateSheet("Sheet0");
 
             int rowCount = dt.Rows.Count;
@@ -143,10 +195,10 @@ namespace EAT
 
                 ICell cellHyperlink = row.CreateCell(2);
                 cellHyperlink.SetCellValue("<链接>");
-                
+
                 //超链接
-                XSSFHyperlink Hyperlink = new XSSFHyperlink(HyperlinkType.File);
-                Hyperlink.Address = "./" + dt.Rows[i][0].ToString()+".txt";
+                HSSFHyperlink Hyperlink = new HSSFHyperlink(HyperlinkType.File);
+                Hyperlink.Address = "./" + dt.Rows[i][0].ToString() + ".txt";
                 cellHyperlink.Hyperlink = Hyperlink;
 
                 //颜色+下划线
@@ -171,21 +223,21 @@ namespace EAT
         private void SaveFiles(string dirPath)
         {
             DataTable dt = (DataTable)this.dataGridView1.DataSource;
-            foreach(DataRow dr in dt.Rows)
+            foreach (DataRow dr in dt.Rows)
             {
                 //如果文件名为空则略过
                 if (String.IsNullOrEmpty(dr[0].ToString().Trim()))
                     continue;
 
-                string filepath = dirPath + '/' + dr[0]+".txt";
+                string filepath = dirPath + '/' + dr[0] + ".txt";
                 if (File.Exists(filepath))
                 {
                     MessageBox.Show("文件已存在:" + filepath);
                     return;
                 }
                 FileStream fs = File.Create(filepath);
-                
-                byte[] content= System.Text.Encoding.Default.GetBytes(dr[1].ToString());
+
+                byte[] content = System.Text.Encoding.Default.GetBytes(dr[1].ToString());
                 fs.Write(content, 0, content.Length);
 
                 fs.Close();
@@ -208,6 +260,7 @@ namespace EAT
 
             isFromExcel = false;
             isFromTexts = true;
+            isFromAny = false;
         }
 
         private void LoadTexts(string[] files)
@@ -215,15 +268,46 @@ namespace EAT
 
             FileStream fs;
             dt.Clear();
-            foreach(string file in files)
+            foreach (string file in files)
             {
                 fs = File.OpenRead(file);
                 DataRow dr = dt.NewRow();
-                dr[0] = file.Substring(file.LastIndexOf('\\')+1,file.LastIndexOf('.')-file.LastIndexOf('\\')-1);
+                dr[0] = file.Substring(file.LastIndexOf('\\') + 1, file.LastIndexOf('.') - file.LastIndexOf('\\') - 1);
 
                 byte[] content = new byte[fs.Length];
                 fs.Read(content, 0, (int)fs.Length);
                 dr[1] = Encoding.Default.GetString(content);
+
+                dt.Rows.Add(dr);
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog open = new OpenFileDialog();
+            open.Multiselect = true;
+            if (open.ShowDialog() == DialogResult.OK)
+            {
+                string[] files = open.FileNames;
+
+                //读取文件
+                LoadAnyFiles(files);
+            }
+
+            isFromExcel = false;
+            isFromTexts = false;
+            isFromAny = true;
+        }
+
+        private void LoadAnyFiles(string[] files)
+        {
+            FileStream fs;
+            dt.Clear();
+            foreach (string file in files)
+            {
+                fs = File.OpenRead(file);
+                DataRow dr = dt.NewRow();
+                dr[0] = file.Substring(file.LastIndexOf('\\') + 1);
 
                 dt.Rows.Add(dr);
             }
